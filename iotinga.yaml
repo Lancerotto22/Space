@@ -1,0 +1,27 @@
+version: 1
+project: OFFICE_AUTOMATION@IOTINGA
+remote_url: https://github.com/iotinga/iotinga-delivery-web-app
+
+prepare:
+  - shell: npm version {{ env.run.version }} -no-git-tag-version
+  - shell: git commit -a -m '[CI] bump version to {{ env.run.version }}' --allow-empty
+  - shell: git push
+    continue-on-error: true
+
+artifacts:
+  - name: iotinga-delivery-web-app
+    build:
+      - shell: npm ci --userconfig private/npmrc --legacy-peer-deps
+      - shell: npm run build
+      - upload:
+          preserve-path: true
+          sources: build/**/*
+
+deliverables:
+  - name: iotinga-delivery-web-app
+    artifacts:
+      - iotinga-delivery-web-app
+    publish:
+      - shell: |
+          aws s3 sync build/ s3://space-tinga-io
+          aws cloudfront create-invalidation --distribution-id "E2I1IK45FNT6XF" --paths '/*'
